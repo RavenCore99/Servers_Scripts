@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "name": "Hermes Desktop Design System",
+    "version": "1.0.0-extracted",
+    "description": "Design system extracted from Hermes Desktop via Reverse Engineering Assistant (REA)",
+    "source": "/home/raven/.hermes/hermes-agent/apps/desktop/",
+    "extraction_date": "2026-10-16",
+    "extraction_method": "REA analysis of source code and DESIGN.md"
+  },
+  "design_tokens": {
+    "`--ui-stroke-primary…quaternary`": "hairlines, in descending strength",
+    "`--ui-stroke-tertiary`": "the default in-panel divider / list hairline — and every bordered surface in the transcript",
+    "`--stroke-nous`": "the overlay hairline (pairs with `shadow-nous`)",
+    "`--ui-text-primary / -secondary / -tertiary`": "text hierarchy",
+    "`--ui-bg-quaternary`": "soft control fill (secondary button)",
+    "`--ui-widget-surface-background`": "fill for inline chat widgets (`WIDGET_SHELL_CLASS`)",
+    "`--chrome-action-hover`": "hover fill for quiet controls",
+    "`--theme-primary`, `--ui-accent`": "brand/accent"
+  },
+  "components": {
+    "loaders": {
+      "available_types": [
+        "original-thinking",
+        "thinking-five",
+        "thinking-nine",
+        "rose-orbit",
+        "rose-curve",
+        "rose-two",
+        "rose-three",
+        "rose-four",
+        "lissajous-drift",
+        "lemniscate-bloom",
+        "hypotrochoid-loop",
+        "three-petal-spiral",
+        "four-petal-spiral",
+        "five-petal-spiral",
+        "six-petal-spiral",
+        "butterfly-phase",
+        "cardioid-glow",
+        "cardioid-heart",
+        "heart-wave",
+        "spiral-search",
+        "fourier-flow"
+      ],
+      "description": "Mathematical curve-based loaders (lemniscate, rose curves, spirals, cardioids, etc.)",
+      "implementation": "Uses requestAnimationFrame with parametric curves for smooth, performant animations",
+      "default_type": "rose-curve",
+      "file_reference": "src/components/ui/loader.tsx"
+    },
+    "button": {
+      "variants": {
+        "default": "primary action button",
+        "destructive": "destructive/danger action",
+        "secondary": "secondary/soft fill action",
+        "outline": "outline/border-only action",
+        "ghost": "ghost/text-only action",
+        "grip": "grip/drag handle",
+        "floating": "floating button (shadow + popover bg)",
+        "link": "link-styled button",
+        "text": "text/button-link",
+        "textStrong": "strong text/button-link"
+      },
+      "sizes": {
+        "default": "default button size",
+        "xs": "extra small",
+        "sm": "small",
+        "lg": "large",
+        "inline": "inline (no padding)",
+        "micro": "micro size for status bars",
+        "icon": "icon size base",
+        "icon-xs": "extra small icon",
+        "icon-sm": "small icon",
+        "icon-lg": "large icon",
+        "grip": "grip size (special for drag handles)",
+        "icon-titlebar": "titlebar icon size"
+      },
+      "description": "Single Button component with variant and size props",
+      "file_reference": "src/components/ui/button.tsx"
+    },
+    "widget_shell": {
+      "css_class": "rounded-3xl bg-(--ui-widget-surface-background) px-3.5 py-3",
+      "description": "Shared shell for inline transcript widgets (clarify, artifact cards)",
+      "file_reference": "src/components/chat/widget-shell.ts"
+    }
+  },
+  "design_principles": [
+    "Flat, not boxed - No card-in-card, no divider borders inside a panel. Group with whitespace and a single hairline, never nested rounded boxes.",
+    "Borderless elevation for floating panels - Overlays float on shadow-nous + a --stroke-nous hairline, not thick framed boxes.",
+    "One primitive per concern - One Button, one set of control variants, one SearchField, one Loader, one ErrorState. Migrate onto them; don't fork.",
+    "Tokens, not literals - Reference CSS vars (--ui-*, --shadow-nous, --theme-*), never raw hex / ad-hoc rgba in components.",
+    "Style lives in the primitive - Variants and sizes own padding, radius, color, chrome. Call sites pass a variant/size, not className overrides that re-specify those.",
+    "Intent before automation - Surface useful actions and previews, but do not open panes, move focus, or navigate because a tool happened to produce something.",
+    "Immediate feedback - Direct manipulation updates the view first. Network or disk persistence reconciles afterward and rolls back visibly on failure."
+  ],
+  "usage_guidelines": {
+    "css_variables": "Use tokens as CSS variables: var(--token-name)",
+    "color_usage": "Never use hardcoded hex colors; always reference design tokens",
+    "layout_principles": "Prefer flat layouts with whitespace over nested boxes",
+    "interaction_feedback": "Provide immediate visual feedback for user actions",
+    "motion_principles": "Animation follows state; respect prefers-reduced-motion"
+  }
+}

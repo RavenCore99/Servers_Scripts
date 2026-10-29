@@ -1,0 +1,31 @@
+/* ==================================================
+   Hermes Design Tokens - CSS Variables
+   Extracted from Hermes Desktop via REA
+   ================================================== */
+
+:root {
+  /* hairlines, in descending strength */
+  --`ui-stroke-primary…quaternary`: `--ui-stroke-primary…quaternary`;
+
+  /* the default in-panel divider / list hairline — and every bordered surface in the transcript */
+  --`ui-stroke-tertiary`: `--ui-stroke-tertiary`;
+
+  /* the overlay hairline (pairs with `shadow-nous`) */
+  --`stroke-nous`: `--stroke-nous`;
+
+  /* text hierarchy */
+  --`ui-text-primary / -secondary / -tertiary`: `--ui-text-primary / -secondary / -tertiary`;
+
+  /* soft control fill (secondary button) */
+  --`ui-bg-quaternary`: `--ui-bg-quaternary`;
+
+  /* fill for inline chat widgets (`WIDGET_SHELL_CLASS`) */
+  --`ui-widget-surface-background`: `--ui-widget-surface-background`;
+
+  /* hover fill for quiet controls */
+  --`chrome-action-hover`: `--chrome-action-hover`;
+
+  /* brand/accent */
+  --`theme-primary`, `ui-accent`: `--theme-primary`, `--ui-accent`;
+
+}

@@ -1,0 +1,48 @@
+{
+  "tokens": {},
+  "loader_types": [
+    "original-thinking",
+    "thinking-five",
+    "thinking-nine",
+    "rose-orbit",
+    "rose-curve",
+    "rose-two",
+    "rose-three",
+    "rose-four",
+    "lissajous-drift",
+    "lemniscate-bloom",
+    "hypotrochoid-loop",
+    "three-petal-spiral",
+    "four-petal-spiral",
+    "five-petal-spiral",
+    "six-petal-spiral",
+    "butterfly-phase",
+    "cardioid-glow",
+    "cardioid-heart",
+    "heart-wave",
+    "spiral-search",
+    "fourier-flow"
+  ],
+  "button_variants": {
+    "default": "variante default",
+    "destructive": "variante destructive",
+    "secondary": "variante secondary",
+    "outline": "variante outline",
+    "ghost": "variante ghost",
+    "grip": "variante grip",
+    "floating": "variante floating",
+    "link": "variante link",
+    "text": "variante text",
+    "textStrong": "variante textStrong"
+  },
+  "button_sizes": {
+    "default": "tamaño default",
+    "xs": "tamaño xs",
+    "sm": "tamaño sm",
+    "lg": "tamaño lg",
+    "inline": "tamaño inline",
+    "micro": "tamaño micro",
+    "icon": "tamaño icon",
+    "grip": "tamaño grip"
+  }
+}

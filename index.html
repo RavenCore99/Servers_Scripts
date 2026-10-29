@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Panel de administración de servidores dinámicos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="estilos.css" />
+</head>
+<body>
+  <canvas id="particle-field" aria-hidden="true"></canvas>
+  <div id="dynamic-light" aria-hidden="true"></div>
+
+  <div class="app">
+    <header class="hero panel glow-aura">
+      <div class="hero__brand">
+        <img class="icon icon--lg" src="desing_h/icons/globe.png" alt="" width="40" height="40" />
+        <div>
+          <p class="eyebrow">CADI · Redes y Comunicación</p>
+          <h1>Panel de administración de servidores dinámicos</h1>
+          <p class="hero__desc">
+            Visualiza el estado de la red, envía solicitudes al balanceador y consulta
+            estadísticas en tiempo real a través de la API.
+          </p>
+        </div>
+      </div>
+      <div class="hero__meta">
+        <span class="pill" id="api-pill" title="URL base de la API" data-conn="unknown">
+          <img class="icon icon--sm" src="desing_h/icons/settings.png" alt="" />
+          <span id="api-conn-dot" class="conn-dot" aria-hidden="true"></span>
+          <span id="api-url-label">http://127.0.0.1:8000</span>
+          <span id="api-conn-label" class="conn-label">sin probar</span>
+        </span>
+        <button type="button" class="btn btn--ghost" id="btn-toggle-motion" aria-pressed="false">
+          <img class="icon icon--sm" src="desing_h/icons/sparkles.png" alt="" />
+          Animaciones
+        </button>
+      </div>
+    </header>
+
+    <section class="section" aria-labelledby="resumen-title">
+      <div class="section__head">
+        <h2 id="resumen-title">
+          <img class="icon" src="desing_h/icons/grid.png" alt="" />
+          Resumen del sistema
+        </h2>
+      </div>
+      <div class="kpi-grid" id="kpi-grid">
+        <article class="kpi shimmer-target" data-kpi="solicitudes">
+          <div class="kpi__icon glow-pulse">
+            <img class="icon" src="desing_h/icons/rocket.png" alt="" />
+          </div>
+          <div>
+            <p class="kpi__label">Solicitudes atendidas</p>
+            <p class="kpi__value" id="kpi-solicitudes">—</p>
+          </div>
+        </article>
+        <article class="kpi shimmer-target" data-kpi="servidores">
+          <div class="kpi__icon">
+            <img class="icon" src="desing_h/icons/building.png" alt="" />
+          </div>
+          <div>
+            <p class="kpi__label">Servidores configurados</p>
+            <p class="kpi__value" id="kpi-servidores">—</p>
+          </div>
+        </article>
+        <article class="kpi shimmer-target" data-kpi="activos">
+          <div class="kpi__icon">
+            <img class="icon" src="desing_h/icons/check-circle.png" alt="" />
+          </div>
+          <div>
+            <p class="kpi__label">Servidores activos</p>
+            <p class="kpi__value" id="kpi-activos">—</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section panel" aria-labelledby="servidores-title">
+      <div class="section__head">
+        <h2 id="servidores-title">
+          <img class="icon" src="desing_h/icons/list.png" alt="" />
+          Listado de servidores
+        </h2>
+        <div class="actions actions--inline">
+          <button type="button" class="btn btn--secondary" id="btn-probar-conexion" title="Consulta real a GET /servidores (health de cada nodo)">
+            <img class="icon icon--sm" src="desing_h/icons/globe.png" alt="" />
+            Probar conexión
+          </button>
+          <button type="button" class="btn btn--ghost" id="btn-actualizar">
+            <img class="icon icon--sm" src="desing_h/icons/refresh-cw.png" alt="" />
+            Actualizar
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap shimmer-target" id="tabla-servidores-wrap">
+        <table class="data-table" id="tabla-servidores">
+          <thead>
+            <tr>
+              <th scope="col">Nombre</th>
+              <th scope="col">Puerto</th>
+              <th scope="col">URL</th>
+              <th scope="col">Estado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-servidores">
+            <tr class="empty-row">
+              <td colspan="4">Cargando servidores…</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="split">
+      <section class="section panel" aria-labelledby="solicitudes-title">
+        <div class="section__head">
+          <h2 id="solicitudes-title">
+            <img class="icon" src="desing_h/icons/download.png" alt="" />
+            Gestión de solicitudes
+          </h2>
+        </div>
+        <p class="section__hint">
+          Envía una petición al balanceador (<code>GET /solicitar</code>). El sistema
+          reparte la carga entre servidores activos.
+        </p>
+        <div class="actions">
+          <button type="button" class="btn btn--primary glow-pulse-hover" id="btn-solicitar">
+            <img class="icon icon--sm" src="desing_h/icons/rocket.png" alt="" />
+            <span>Enviar solicitud</span>
+          </button>
+          <button type="button" class="btn btn--ghost" id="btn-solicitar-x5" title="Envía cinco solicitudes seguidas">
+            <img class="icon icon--sm" src="desing_h/icons/hourglass.png" alt="" />
+            Enviar ×5
+          </button>
+        </div>
+        <div class="result-card" id="resultado-solicitud" hidden>
+          <div class="result-card__head">
+            <img class="icon" src="desing_h/icons/check-circle.png" alt="" id="resultado-icon" />
+            <strong id="resultado-titulo">Resultado</strong>
+          </div>
+          <dl class="result-card__body" id="resultado-body"></dl>
+        </div>
+      </section>
+
+      <section class="section panel" aria-labelledby="stats-title">
+        <div class="section__head">
+          <h2 id="stats-title">
+            <img class="icon" src="desing_h/icons/bar-chart.png" alt="" />
+            Estadísticas
+          </h2>
+          <button type="button" class="btn btn--ghost" id="btn-stats">
+            <img class="icon icon--sm" src="desing_h/icons/refresh-cw.png" alt="" />
+            Consultar
+          </button>
+        </div>
+        <p class="stat-total">
+          Total:
+          <strong id="stats-total">0</strong>
+          solicitudes
+        </p>
+        <div class="bars shimmer-target" id="stats-bars" role="list" aria-label="Solicitudes por servidor">
+          <p class="empty-hint">Sin estadísticas todavía. Envía una solicitud para comenzar.</p>
+        </div>
+      </section>
+    </div>
+
+    <section class="section panel" aria-labelledby="mensajes-title">
+      <div class="section__head">
+        <h2 id="mensajes-title">
+          <img class="icon" src="desing_h/icons/info.png" alt="" />
+          Mensajes del sistema
+        </h2>
+        <button type="button" class="btn btn--text" id="btn-limpiar-log">Limpiar</button>
+      </div>
+      <div class="log" id="log-mensajes" role="log" aria-live="polite" aria-relevant="additions">
+        <p class="log__empty">Los resultados, errores y avisos de conexión aparecerán aquí.</p>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>Universidad de Cundinamarca · Taller Redes Masivas de Servidores</span>
+      <span id="footer-clock" class="mono"></span>
+    </footer>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+{
+  "design_system": {
+    "name": "Hermes Desktop Design System",
+    "version": "extracted-via-REA",
+    "source": "Hermes Desktop apps/desktop/src/",
+    "extraction_method": "Reverse Engineering Assistant (REA) analysis",
+    "principles": [
+      "Flat, not boxed",
+      "Borderless elevation for floating panels",
+      "One primitive per concern",
+      "Tokens, not literals",
+      "Style lives in the primitive",
+      "Intent before automation",
+      "Immediate feedback"
+    ]
+  },
+  "tokens": {
+    "`--ui-stroke-primary…quaternary`": "hairlines, in descending strength",
+    "`--ui-stroke-tertiary`": "the default in-panel divider / list hairline — and every bordered surface in the transcript",
+    "`--stroke-nous`": "the overlay hairline (pairs with `shadow-nous`)",
+    "`--ui-text-primary / -secondary / -tertiary`": "text hierarchy",
+    "`--ui-bg-quaternary`": "soft control fill (secondary button)",
+    "`--ui-widget-surface-background`": "fill for inline chat widgets (`WIDGET_SHELL_CLASS`)",
+    "`--chrome-action-hover`": "hover fill for quiet controls",
+    "`--theme-primary`, `--ui-accent`": "brand/accent"
+  },
+  "loaders": {
+    "types": [
+      "original-thinking",
+      "thinking-five",
+      "thinking-nine",
+      "rose-orbit",
+      "rose-curve",
+      "rose-two",
+      "rose-three",
+      "rose-four",
+      "lissajous-drift",
+      "lemniscate-bloom",
+      "hypotrochoid-loop",
+      "three-petal-spiral",
+      "four-petal-spiral",
+      "five-petal-spiral",
+      "six-petal-spiral",
+      "butterfly-phase",
+      "cardioid-glow",
+      "cardioid-heart",
+      "heart-wave",
+      "spiral-search",
+      "fourier-flow"
+    ],
+    "description": "Mathematical curve-based loaders instead of generic spinners",
+    "implementation": "Uses requestAnimationFrame with parametric curves like lemniscate, rose, spirals, cardioids",
+    "default_type": "rose-curve"
+  },
+  "components": {
+    "button": {
+      "variants": {
+        "default": "primary action button",
+        "destructive": "destructive/danger action",
+        "secondary": "secondary/soft fill action",
+        "outline": "outline/border-only action",
+        "ghost": "ghost/text-only action",
+        "grip": "grip/drag handle",
+        "floating": "floating button (shadow + popover bg)",
+        "link": "link-styled button",
+        "text": "text/button-link",
+        "textStrong": "strong text/button-link"
+      },
+      "sizes": {
+        "default": "default button size",
+        "xs": "extra small",
+        "sm": "small",
+        "lg": "large",
+        "inline": "inline (no padding)",
+        "micro": "micro size for status bars",
+        "icon": "icon size base",
+        "icon-xs": "extra small icon",
+        "icon-sm": "small icon",
+        "icon-lg": "large icon",
+        "grip": "grip size (special for drag handles)",
+        "icon-titlebar": "titlebar icon size"
+      },
+      "description": "Single Button component with variant/size props"
+    },
+    "loader": {
+      "component": "Loader",
+      "description": "Animated mathematical curve loader"
+    },
+    "widget_shell": {
+      "class": "rounded-3xl bg-(--ui-widget-surface-background) px-3.5 py-3",
+      "description": "Shared shell for inline transcript widgets"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+# Regenerable / no portable entre sistemas
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*.log
+logs/
+**/logs/
+.deps_ok
+*.egg-info/
+.pytest_cache/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,46 @@
+#!/usr/bin/env python3
+"""
+Hermes Design Tokens Extractor
+Extrae y proporciona acceso a los tokens de diseño de Hermes Desktop
+para uso en otros proyectos.
+"""
+
+class HermesDesignTokens:
+    """Tokens de diseño extraídos de Hermes Desktop"""
+
+    # Tokens de color y stroke (de DESIGN.md)
+    COLOR_TOKENS = {
+        "`--ui-stroke-primary…quaternary`": "hairlines, in descending strength",  # hairlines, in descending strength\n        "`--ui-stroke-tertiary`": "the default in-panel divider / list hairline — and every bordered surface in the transcript",  # the default in-panel divider / list hairline — and every bordered surface in the transcript\n        "`--stroke-nous`": "the overlay hairline (pairs with `shadow-nous`)",  # the overlay hairline (pairs with `shadow-nous`)\n        "`--ui-text-primary / -secondary / -tertiary`": "text hierarchy",  # text hierarchy\n        "`--ui-bg-quaternary`": "soft control fill (secondary button)",  # soft control fill (secondary button)\n        "`--ui-widget-surface-background`": "fill for inline chat widgets (`WIDGET_SHELL_CLASS`)",  # fill for inline chat widgets (`WIDGET_SHELL_CLASS`)\n        "`--chrome-action-hover`": "hover fill for quiet controls",  # hover fill for quiet controls\n        "`--theme-primary`, `--ui-accent`": "brand/accent",  # brand/accent\n    }
+
+    # Tipos de loader disponibles
+    LOADER_TYPES = [
+        "original-thinking",\n        "thinking-five",\n        "thinking-nine",\n        "rose-orbit",\n        "rose-curve",\n        "rose-two",\n        "rose-three",\n        "rose-four",\n        "lissajous-drift",\n        "lemniscate-bloom",\n        "hypotrochoid-loop",\n        "three-petal-spiral",\n        "four-petal-spiral",\n        "five-petal-spiral",\n        "six-petal-spiral",\n        "butterfly-phase",\n        "cardioid-glow",\n        "cardioid-heart",\n        "heart-wave",\n        "spiral-search",\n        "fourier-flow",\n    ]
+
+    @classmethod
+    def get_token_description(cls, token):
+        """Obtiene la descripción de un token de diseño"""
+        return cls.COLOR_TOKENS.get(token, f"Token {token} no encontrado")
+
+    @classmethod
+    def list_tokens(cls):
+        """Lista todos los tokens de diseño disponibles"""
+        return list(cls.COLOR_TOKENS.keys())
+
+    @classmethod
+    def list_loaders(cls):
+        """Lista todos los tipos de loader disponibles"""
+        return cls.LOADER_TYPES.copy()
+
+# Ejemplo de uso
+if __name__ == "__main__":
+    print("=== Tokens de Diseño de Hermes Desktop ===")
+    for token in HermesDesignTokens.list_tokens()[:5]:
+        desc = HermesDesignTokens.get_token_description(token)
+        print(f"{token}: {desc}")
+
+    print(f"\nTotal de tokens: {len(HermesDesignTokens.list_tokens())}")
+
+    print("\n=== Tipos de Loader Animado ===")
+    for loader in HermesDesignTokens.list_loaders()[:5]:
+        print(f"  - {loader}")
+    print(f"  ... y {len(HermesDesignTokens.list_loaders()) - 5} más")

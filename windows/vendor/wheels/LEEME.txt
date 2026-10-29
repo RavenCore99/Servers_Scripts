@@ -1,0 +1,5 @@
+Cache de wheels para Windows (amd64).
+iniciar.ps1 instala desde aqui con:
+  pip install --no-index --find-links vendor\wheels -r requirements.txt
+
+Cubiertas aproximadas: Python 3.10, 3.11, 3.12, 3.13 y 3.14 (win_amd64).
