@@ -1,5 +1,6 @@
 """Contract checks for launcher safeguards and documentation."""
 from pathlib import Path
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +29,14 @@ class LauncherContracts(unittest.TestCase):
         linux = (ROOT / "iniciar.sh").read_text(encoding="utf-8")
         self.assertIn('"$PY" -m pip install', linux)
         self.assertIn('"$PY" -m uvicorn balanceador:app', linux)
+
+    def test_portable_python_native_extensions_are_tracked(self):
+        tracked = subprocess.check_output(
+            ["git", "ls-files", "windows/runtime/python/*.pyd"],
+            cwd=ROOT, text=True,
+        ).splitlines()
+        self.assertIn("windows/runtime/python/_socket.pyd", tracked)
+        self.assertIn("windows/runtime/python/_ssl.pyd", tracked)
 
 
 if __name__ == "__main__":
