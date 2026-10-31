@@ -1,5 +1,12 @@
 # Servers_Scripts
 
+![Python 3.10+](assets/badges/python.svg)
+![Shell Bash](assets/badges/shell.svg)
+![PowerShell 5.1+](assets/badges/powershell.svg)
+![JavaScript](assets/badges/javascript.svg)
+![HTML5](assets/badges/html5.svg)
+![CSS3](assets/badges/css3.svg)
+
 Panel de administración de **servidores dinámicos** + API FastAPI (balanceador + nodos) + UI web.
 
 Repositorio para ejecutar el panel localmente en Linux o Windows x64. Los lanzadores no modifican `servidores.py` ni `balanceador.py`, la base de la actividad.
