@@ -34,8 +34,10 @@ URLs (puertos 2800x para evitar reservas de Hyper-V/WSL en ~8000)
 - API:   http://127.0.0.1:28000/
 - Docs:  http://127.0.0.1:28000/docs
 
-La barra indica etapas reales; el spinner braille anima las esperas si
-la terminal admite UTF-8. En otras terminales usa ASCII.
+La barra indica etapas reales; el spinner braille aparece desde las
+comprobaciones y anima la instalacion de pip/librerias y las esperas
+si la terminal admite UTF-8. En otras terminales usa ASCII. El detalle
+de la instalacion se imprime al terminar cada tarea, incluso si falla.
 Si un puerto de API esta ocupado, cierralo tu; el script no detiene
 otros programas. La UI busca otro puerto. Si falla, mira logs\.
 Ctrl+C detiene los procesos que este lanzador inicio.
