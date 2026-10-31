@@ -120,14 +120,21 @@ function Quote-Arg([string]$Value) {
 
 function Invoke-PythonTask {
   param([string[]]$Arguments, [string]$Message)
-  $logsDir = Join-Path $Root 'logs'
-  New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
-  $base = Join-Path $logsDir ('setup-' + [guid]::NewGuid().ToString('N'))
-  $out = $base + '.out.log'
-  $err = $base + '.err.log'
   $argLine = ($Arguments | ForEach-Object { Quote-Arg $_ }) -join ' '
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $script:Py
+  $psi.Arguments = $argLine
+  $psi.WorkingDirectory = $Root
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $script:SetupProcess = New-Object System.Diagnostics.Process
+  $script:SetupProcess.StartInfo = $psi
   try {
-    $script:SetupProcess = Start-Process -FilePath $script:Py -ArgumentList $argLine -WorkingDirectory $Root -PassThru -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden
+    $null = $script:SetupProcess.Start()
+    $outputTask = $script:SetupProcess.StandardOutput.ReadToEndAsync()
+    $errorTask = $script:SetupProcess.StandardError.ReadToEndAsync()
     $tick = 0
     while (-not $script:SetupProcess.HasExited) {
       Show-Wait $Message $tick
@@ -137,9 +144,10 @@ function Invoke-PythonTask {
     }
     $script:SetupProcess.WaitForExit()
     Clear-Wait
-    foreach ($file in @($out, $err)) {
-      if (Test-Path -LiteralPath $file) { Get-Content -LiteralPath $file | ForEach-Object { Write-Host $_ } }
-    }
+    $output = $outputTask.GetAwaiter().GetResult()
+    $errorOutput = $errorTask.GetAwaiter().GetResult()
+    if ($output) { Write-Host $output }
+    if ($errorOutput) { Write-Host $errorOutput }
     $exitCode = $script:SetupProcess.ExitCode
     Write-Host "    $Message finalizo con codigo: $exitCode" -ForegroundColor DarkGray
   } finally {
@@ -147,8 +155,8 @@ function Invoke-PythonTask {
     if ($null -ne $script:SetupProcess -and -not $script:SetupProcess.HasExited) {
       Stop-Process -Id $script:SetupProcess.Id -Force -ErrorAction SilentlyContinue
     }
+    if ($null -ne $script:SetupProcess) { $script:SetupProcess.Dispose() }
     $script:SetupProcess = $null
-    Remove-Item -LiteralPath $out, $err -Force -ErrorAction SilentlyContinue
   }
   return $exitCode
 }
