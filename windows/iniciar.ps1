@@ -140,7 +140,7 @@ function Invoke-PythonTask {
     foreach ($file in @($out, $err)) {
       if (Test-Path -LiteralPath $file) { Get-Content -LiteralPath $file | ForEach-Object { Write-Host $_ } }
     }
-    return $script:SetupProcess.ExitCode
+    $exitCode = $script:SetupProcess.ExitCode
   } finally {
     Clear-Wait
     if ($null -ne $script:SetupProcess -and -not $script:SetupProcess.HasExited) {
@@ -149,6 +149,7 @@ function Invoke-PythonTask {
     $script:SetupProcess = $null
     Remove-Item -LiteralPath $out, $err -Force -ErrorAction SilentlyContinue
   }
+  return $exitCode
 }
 
 function Wait-Port([int]$Port, [string]$Name, $Process = $null, [string]$LogFile = $null) {

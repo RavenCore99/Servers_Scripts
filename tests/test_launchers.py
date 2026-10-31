@@ -89,6 +89,9 @@ class LauncherContracts(unittest.TestCase):
         self.assertIn("function Invoke-PythonTask", script)
         self.assertIn("Invoke-PythonTask -Arguments @($GetPip", script)
         self.assertIn("Invoke-PythonTask -Arguments @('-m', 'pip', 'install'", script)
+        task = script.split("function Invoke-PythonTask {", 1)[1].split("function Wait-Port", 1)[0]
+        self.assertIn("$exitCode = $script:SetupProcess.ExitCode", task)
+        self.assertLess(task.index("} finally {"), task.index("return $exitCode"))
 
 
 if __name__ == "__main__":
