@@ -1,0 +1,54 @@
+name: Lanzadores
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Contratos y sintaxis
+        run: python3 -m unittest discover -s tests -v && bash -n iniciar.sh
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Comprobar instalación portable sin Python del sistema
+        shell: powershell
+        run: |
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\windows\iniciar.ps1 -CheckOnly
+          if ($LASTEXITCODE -ne 0) { throw 'Preflight Windows falló' }
+      - name: Probar arranque y endpoints HTTP
+        shell: powershell
+        run: |
+          $launcher = Start-Job -ScriptBlock {
+            param($project)
+            Set-Location (Join-Path $project 'windows')
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\iniciar.ps1 -NoBrowser
+            if ($LASTEXITCODE -ne 0) { throw "Lanzador terminó con $LASTEXITCODE" }
+          } -ArgumentList $PWD.Path
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 120; $i++) {
+              if ($launcher.State -eq 'Failed') { throw "Lanzador falló: $(Receive-Job $launcher)" }
+              try {
+                $panel = Invoke-WebRequest 'http://127.0.0.1:5500/' -UseBasicParsing -TimeoutSec 2
+                $api = Invoke-WebRequest 'http://127.0.0.1:28000/docs' -UseBasicParsing -TimeoutSec 2
+                if ($panel.StatusCode -eq 200 -and $api.StatusCode -eq 200) { $ready = $true; break }
+              } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ready) { throw "No respondieron panel/API: $(Receive-Job $launcher -Keep)" }
+            Write-Host 'Panel y API respondieron HTTP 200.'
+          } finally {
+            Stop-Job $launcher -ErrorAction SilentlyContinue
+            Remove-Job $launcher -Force -ErrorAction SilentlyContinue
+          }
+      - name: Mostrar errores si falla
+        if: failure()
+        shell: powershell
+        run: |
+          Get-ChildItem windows\logs\*.log -ErrorAction SilentlyContinue | ForEach-Object {
+            Write-Host $_.FullName
+            Get-Content $_.FullName -Tail 40
+          }

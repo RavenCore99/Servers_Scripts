@@ -7,20 +7,40 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
+STAGE=0
+show_stage() {
+  STAGE=$((STAGE + 1))
+  local filled=$(( STAGE * 14 / 7 ))
+  local bar
+  printf -v bar '%*s' "$filled" ''
+  bar="${bar// /#}"
+  if [[ -t 1 ]]; then
+    printf '\033[36m[%-14s] %s/7\033[0m %s\n' "$bar" "$STAGE" "$1"
+  else
+    printf '[%-14s] %s/7 %s\n' "$bar" "$STAGE" "$1"
+  fi
+}
+
+show_wait() {
+  [[ -t 1 ]] || return 0
+  local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+  if [[ "${LANG:-}${LC_ALL:-}" != *UTF-8* && "${LANG:-}${LC_ALL:-}" != *utf8* ]]; then
+    frames=('|' '/' '-' '\')
+  fi
+  printf '\r\033[33m    Esperando %s %s   \033[0m' "$1" "${frames[$(( $2 % ${#frames[@]} ))]}"
+}
+
+show_stage 'Comprobando Python y entorno'
+
 PY="${ROOT}/venv/bin/python"
-PIP="${ROOT}/venv/bin/pip"
-UVICORN="${ROOT}/venv/bin/uvicorn"
 
 if [[ ! -x "$PY" ]]; then
   echo "[*] Creando entorno virtual en ./venv ..."
   python3 -m venv venv
-  PY="${ROOT}/venv/bin/python"
-  PIP="${ROOT}/venv/bin/pip"
-  UVICORN="${ROOT}/venv/bin/uvicorn"
 fi
 
-echo "[*] Instalando dependencias mínimas (fastapi, uvicorn, httpx) ..."
-"$PIP" install -q -r requirements.txt
+show_stage 'Instalando dependencias Python'
+"$PY" -m pip install -r requirements.txt
 
 PIDS=()
 cleanup() {
@@ -46,13 +66,8 @@ ensure_port_free() {
   local port="$1"
   local name="$2"
   if port_busy "$port"; then
-    echo "[!] Puerto ${port} ocupado (${name}). Intentando liberarlo..."
-    if ! "$PY" _puertos.py free "$port"; then
-      echo "    ✗ No se pudo liberar :${port}." >&2
-      echo "      Cierra el proceso manualmente: ss -tlnp | grep ${port}" >&2
-      exit 1
-    fi
-    echo "    ✓ Puerto ${port} libre"
+    echo "[!] Puerto ${port} ocupado (${name}). Cierra el proceso que lo utiliza; no se cerrarán procesos ajenos." >&2
+    exit 1
   fi
 }
 
@@ -73,9 +88,11 @@ finally:
     s.close()
 PY
     then
+      [[ -t 1 ]] && printf '\n'
       echo "    ✓ ${name} listo en :${port}"
       return 0
     fi
+    show_wait "$name" "$i"
     sleep 0.15
     ((i++)) || true
   done
@@ -84,6 +101,7 @@ PY
 }
 
 # Puertos de la API son fijos en balanceador.py
+show_stage 'Comprobando puertos de API'
 ensure_port_free 8001 "Servidor 1"
 ensure_port_free 8002 "Servidor 2"
 ensure_port_free 8003 "Servidor 3"
@@ -91,10 +109,10 @@ ensure_port_free 8000 "Balanceador"
 
 UI_PORT_PREF="${UI_PORT:-5500}"
 if port_busy "$UI_PORT_PREF"; then
-  echo "[!] Puerto UI ${UI_PORT_PREF} ocupado. Intentando liberarlo..."
-  "$PY" _puertos.py free "$UI_PORT_PREF" || true
+  echo "[*] Puerto UI ${UI_PORT_PREF} ocupado; buscando alternativa sin cerrar otros procesos."
 fi
 
+show_stage 'Iniciando tres servidores'
 echo "[*] Iniciando Servidor 1 → :8001"
 "$PY" servidores.py 8001 "Servidor 1" &
 PIDS+=($!)
@@ -111,13 +129,13 @@ wait_port 8001 "Servidor 1"
 wait_port 8002 "Servidor 2"
 wait_port 8003 "Servidor 3"
 
-echo "[*] Iniciando balanceador FastAPI → :8000"
-"$UVICORN" balanceador:app --host 127.0.0.1 --port 8000 &
+show_stage 'Iniciando balanceador FastAPI'
+"$PY" -m uvicorn balanceador:app --host 127.0.0.1 --port 8000 &
 PIDS+=($!)
 wait_port 8000 "Balanceador"
 
 UI_LOG="$(mktemp)"
-echo "[*] Sirviendo panel web (preferido :${UI_PORT_PREF})..."
+show_stage 'Iniciando panel web'
 "$PY" servir_ui.py "$UI_PORT_PREF" --root "$ROOT" >"$UI_LOG" 2>&1 &
 PIDS+=($!)
 UI_PID="${PIDS[-1]}"
@@ -150,6 +168,7 @@ if [[ "$UI_PORT" != "$UI_PORT_PREF" ]]; then
   echo "    ℹ Puerto ${UI_PORT_PREF} no disponible; UI en :${UI_PORT}"
 fi
 
+show_stage 'Servicios listos'
 echo
 echo "=============================================="
 echo "  Panel:       http://127.0.0.1:${UI_PORT}/"
