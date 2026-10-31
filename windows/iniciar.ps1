@@ -141,6 +141,7 @@ function Invoke-PythonTask {
       if (Test-Path -LiteralPath $file) { Get-Content -LiteralPath $file | ForEach-Object { Write-Host $_ } }
     }
     $exitCode = $script:SetupProcess.ExitCode
+    Write-Host "    $Message finalizo con codigo: $exitCode" -ForegroundColor DarkGray
   } finally {
     Clear-Wait
     if ($null -ne $script:SetupProcess -and -not $script:SetupProcess.HasExited) {
@@ -258,7 +259,7 @@ function Ensure-Pip {
   Write-Host "[*] Instalando pip en el runtime portable..." -ForegroundColor Cyan
   $status = Invoke-PythonTask -Arguments @($GetPip, '--no-warn-script-location', '--disable-pip-version-check') -Message 'Instalando pip'
   if ($status -ne 0) {
-    throw "No se pudo instalar pip en el runtime portable."
+    throw "No se pudo instalar pip en el runtime portable (codigo: $status)."
   }
 }
 
