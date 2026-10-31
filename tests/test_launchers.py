@@ -1,7 +1,12 @@
 """Contract checks for launcher safeguards and documentation."""
 from pathlib import Path
+import os
 import subprocess
+import tempfile
 import unittest
+
+if os.name == "posix":
+    import pty
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,6 +42,53 @@ class LauncherContracts(unittest.TestCase):
         ).splitlines()
         self.assertIn("windows/runtime/python/_socket.pyd", tracked)
         self.assertIn("windows/runtime/python/_ssl.pyd", tracked)
+
+    @unittest.skipUnless(os.name == "posix", "PTY disponible en Linux")
+    def test_linux_animates_during_dependency_install_and_reports_failure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "iniciar.sh").write_bytes((ROOT / "iniciar.sh").read_bytes())
+            (root / "requirements.txt").write_text("fastapi\n")
+            python = root / "venv/bin/python"
+            python.parent.mkdir(parents=True)
+            python.write_text("#!/bin/sh\nsleep 0.7\necho 'pip failed deliberately' >&2\nexit 17\n")
+            python.chmod(0o755)
+            master, slave = pty.openpty()
+            try:
+                env = {**os.environ, "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
+                proc = subprocess.Popen(
+                    ["bash", str(root / "iniciar.sh")], cwd=root,
+                    stdin=subprocess.DEVNULL, stdout=slave, stderr=slave, env=env,
+                )
+                os.close(slave)
+                slave = -1
+                proc.wait(timeout=10)
+                chunks = []
+                while True:
+                    try:
+                        chunk = os.read(master, 65536)
+                    except OSError:
+                        break
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                output = b"".join(chunks).decode("utf-8", errors="replace")
+                self.assertEqual(proc.returncode, 17, output)
+                self.assertIn("Instalando dependencias", output)
+                self.assertIn("⠋", output)
+                self.assertIn("⠙", output)
+                self.assertIn("pip failed deliberately", output)
+                self.assertNotIn("Servicios listos", output)
+            finally:
+                os.close(master)
+                if slave != -1:
+                    os.close(slave)
+
+    def test_windows_installer_runs_with_spinner_instead_of_blocking(self):
+        script = (ROOT / "windows/iniciar.ps1").read_text(encoding="utf-8")
+        self.assertIn("function Invoke-PythonTask", script)
+        self.assertIn("Invoke-PythonTask -Arguments @($GetPip", script)
+        self.assertIn("Invoke-PythonTask -Arguments @('-m', 'pip', 'install'", script)
 
 
 if __name__ == "__main__":

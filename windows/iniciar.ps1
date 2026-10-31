@@ -30,9 +30,13 @@ $script:UiPort = $UiPortPref
 $script:Procs = @()
 $script:ProcLogs = @{}
 $script:Py = $null
+$script:SetupProcess = $null
 $script:Stage = 0
-$script:StageCount = 7
+$script:StageCount = 8
 $script:Interactive = [Environment]::UserInteractive -and -not [Console]::IsOutputRedirected
+if ($script:Interactive -and $env:WT_SESSION) {
+  try { [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false) } catch {}
+}
 $script:Braille = $script:Interactive -and [Console]::OutputEncoding.WebName -eq 'utf-8'
 
 function Show-Stage([string]$Message) {
@@ -47,6 +51,10 @@ function Show-Wait([string]$Message, [int]$Tick) {
   if (-not $script:Interactive) { return }
   $frames = if ($script:Braille) { @(0x280B,0x2819,0x2839,0x2838,0x283C,0x2834,0x2826,0x2827,0x2807,0x280F) | ForEach-Object { [char]$_ } } else { @('|','/','-','\') }
   Write-Host "`r    $Message $($frames[$Tick % $frames.Count])   " -NoNewline -ForegroundColor Yellow
+}
+
+function Clear-Wait {
+  if ($script:Interactive) { Write-Host '' }
 }
 
 function Test-Workspace {
@@ -73,6 +81,9 @@ function Test-Workspace {
 Write-Host "[*] Carpeta del proyecto: $Root" -ForegroundColor DarkGray
 
 function Stop-All {
+  if ($null -ne $script:SetupProcess -and -not $script:SetupProcess.HasExited) {
+    try { Stop-Process -Id $script:SetupProcess.Id -Force -ErrorAction SilentlyContinue } catch {}
+  }
   Write-Host ""
   Write-Host "[*] Deteniendo procesos..." -ForegroundColor Yellow
   foreach ($p in $script:Procs) {
@@ -107,6 +118,39 @@ function Quote-Arg([string]$Value) {
   return $Value
 }
 
+function Invoke-PythonTask {
+  param([string[]]$Arguments, [string]$Message)
+  $logsDir = Join-Path $Root 'logs'
+  New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+  $base = Join-Path $logsDir ('setup-' + [guid]::NewGuid().ToString('N'))
+  $out = $base + '.out.log'
+  $err = $base + '.err.log'
+  $argLine = ($Arguments | ForEach-Object { Quote-Arg $_ }) -join ' '
+  try {
+    $script:SetupProcess = Start-Process -FilePath $script:Py -ArgumentList $argLine -WorkingDirectory $Root -PassThru -RedirectStandardOutput $out -RedirectStandardError $err -WindowStyle Hidden
+    $tick = 0
+    while (-not $script:SetupProcess.HasExited) {
+      Show-Wait $Message $tick
+      $tick++
+      Start-Sleep -Milliseconds 120
+      $script:SetupProcess.Refresh()
+    }
+    $script:SetupProcess.WaitForExit()
+    Clear-Wait
+    foreach ($file in @($out, $err)) {
+      if (Test-Path -LiteralPath $file) { Get-Content -LiteralPath $file | ForEach-Object { Write-Host $_ } }
+    }
+    return $script:SetupProcess.ExitCode
+  } finally {
+    Clear-Wait
+    if ($null -ne $script:SetupProcess -and -not $script:SetupProcess.HasExited) {
+      Stop-Process -Id $script:SetupProcess.Id -Force -ErrorAction SilentlyContinue
+    }
+    $script:SetupProcess = $null
+    Remove-Item -LiteralPath $out, $err -Force -ErrorAction SilentlyContinue
+  }
+}
+
 function Wait-Port([int]$Port, [string]$Name, $Process = $null, [string]$LogFile = $null) {
   # Hasta ~25s (USB/discos lentos)
   for ($i = 0; $i -lt 100; $i++) {
@@ -133,7 +177,7 @@ $tail
       if ($ok -and $client.Connected) {
         $client.EndConnect($iar) | Out-Null
         $client.Close()
-        if ($script:Interactive) { Write-Host '' }
+        Clear-Wait
         Write-Host "    OK $Name listo en :$Port" -ForegroundColor Green
         return
       }
@@ -211,8 +255,8 @@ function Ensure-Pip {
   }
 
   Write-Host "[*] Instalando pip en el runtime portable..." -ForegroundColor Cyan
-  & $script:Py $GetPip --no-warn-script-location --disable-pip-version-check
-  if ($LASTEXITCODE -ne 0) {
+  $status = Invoke-PythonTask -Arguments @($GetPip, '--no-warn-script-location', '--disable-pip-version-check') -Message 'Instalando pip'
+  if ($status -ne 0) {
     throw "No se pudo instalar pip en el runtime portable."
   }
 }
@@ -227,7 +271,9 @@ function Test-DepsOk {
 }
 
 function Install-Libraries {
-  if (Test-DepsOk) {
+  $depsOk = Test-DepsOk
+  Clear-Wait
+  if ($depsOk) {
     Write-Host "[*] Librerias OK (fastapi/uvicorn/httpx ya disponibles)." -ForegroundColor Green
     return
   }
@@ -242,8 +288,8 @@ function Install-Libraries {
   Write-Host "[*] Instalando librerias Python automaticamente..." -ForegroundColor Cyan
   if ($wheelCount -gt 0) {
     Write-Host "    Fuente: vendor\wheels ($wheelCount paquetes, offline)" -ForegroundColor DarkGray
-    & $script:Py -m pip install --no-index --find-links $WheelsDir -r $ReqFile --disable-pip-version-check
-    if ($LASTEXITCODE -eq 0 -and (Test-DepsOk)) {
+    $status = Invoke-PythonTask -Arguments @('-m', 'pip', 'install', '--no-index', '--find-links', $WheelsDir, '-r', $ReqFile, '--disable-pip-version-check') -Message 'Instalando paquetes offline'
+    if ($status -eq 0 -and (Test-DepsOk)) {
       Write-Host "    OK instalacion desde wheels locales." -ForegroundColor Green
       return
     }
@@ -252,8 +298,8 @@ function Install-Libraries {
     Write-Host "    Sin vendor\wheels. Intentando PyPI..." -ForegroundColor Yellow
   }
 
-  & $script:Py -m pip install -r $ReqFile --disable-pip-version-check
-  if ($LASTEXITCODE -ne 0 -or -not (Test-DepsOk)) {
+  $status = Invoke-PythonTask -Arguments @('-m', 'pip', 'install', '-r', $ReqFile, '--disable-pip-version-check') -Message 'Instalando paquetes desde PyPI'
+  if ($status -ne 0 -or -not (Test-DepsOk)) {
     throw "No se pudieron instalar las librerias. Revisa vendor\wheels o la conexion a internet."
   }
   Write-Host "    OK librerias instaladas." -ForegroundColor Green
@@ -265,13 +311,18 @@ try {
   $env:PYTHONPATH = $Root
   $env:PATH = "$RuntimeDir;$env:PATH"
   Show-Stage 'Comprobando permisos y archivos'
+  Show-Wait 'Comprobando sistema' 0
   Test-Workspace
+  Clear-Wait
   Show-Stage 'Preparando Python portable x64'
+  Show-Wait 'Preparando Python' 0
   Ensure-PortableRuntime
   $script:Py = $RuntimePy
   & $script:Py -c "import sys; assert sys.version_info[:2] == (3, 12) and sys.maxsize > 2**32" | Out-Null
   if ($LASTEXITCODE -ne 0) { throw 'El runtime incluido no es Python 3.12 x64 o no puede ejecutarse en este equipo.' }
+  Clear-Wait
   Show-Stage 'Verificando dependencias Python'
+  Show-Wait 'Verificando librerias' 0
   Install-Libraries
   if ($CheckOnly) { Write-Host 'Comprobacion completada; no se iniciaron servidores.'; return }
 
@@ -332,6 +383,7 @@ try {
     throw "No se pudo determinar el puerto de la UI.`n$content"
   }
   Wait-Port ([int]$script:UiPort) "UI estatica" $uiProc $uiLog
+  Show-Stage 'Servicios listos'
 
   Write-Host ""
   Write-Host "==============================================" -ForegroundColor Green

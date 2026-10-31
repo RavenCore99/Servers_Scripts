@@ -24,26 +24,27 @@ show_stage() {
 show_wait() {
   [[ -t 1 ]] || return 0
   local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
-  if [[ "${LANG:-}${LC_ALL:-}" != *UTF-8* && "${LANG:-}${LC_ALL:-}" != *utf8* ]]; then
+  local locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+  if [[ "$locale" != *UTF-8* && "$locale" != *utf8* ]]; then
     frames=('|' '/' '-' '\')
   fi
   printf '\r\033[33m    Esperando %s %s   \033[0m' "$1" "${frames[$(( $2 % ${#frames[@]} ))]}"
 }
 
-show_stage 'Comprobando Python y entorno'
-
-PY="${ROOT}/venv/bin/python"
-
-if [[ ! -x "$PY" ]]; then
-  echo "[*] Creando entorno virtual en ./venv ..."
-  python3 -m venv venv
-fi
-
-show_stage 'Instalando dependencias Python'
-"$PY" -m pip install -r requirements.txt
+clear_wait() {
+  [[ -t 1 ]] && printf '\r\033[2K' || true
+}
 
 PIDS=()
+RUNNING_TASK=""
+RUNNING_LOG=""
 cleanup() {
+  clear_wait
+  if [[ -n "$RUNNING_TASK" ]]; then
+    kill "$RUNNING_TASK" 2>/dev/null || true
+    wait "$RUNNING_TASK" 2>/dev/null || true
+  fi
+  [[ -z "$RUNNING_LOG" ]] || rm -f "$RUNNING_LOG"
   echo
   echo "[*] Deteniendo procesos..."
   for pid in "${PIDS[@]:-}"; do
@@ -55,7 +56,43 @@ cleanup() {
   done
   wait 2>/dev/null || true
 }
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+run_with_spinner() {
+  local label="$1" status=0 tick=0
+  shift
+  RUNNING_LOG="$(mktemp)"
+  "$@" >"$RUNNING_LOG" 2>&1 &
+  RUNNING_TASK=$!
+  while kill -0 "$RUNNING_TASK" 2>/dev/null; do
+    show_wait "$label" "$tick"
+    tick=$((tick + 1))
+    sleep 0.12
+  done
+  if wait "$RUNNING_TASK"; then status=0; else status=$?; fi
+  RUNNING_TASK=""
+  clear_wait
+  cat "$RUNNING_LOG"
+  rm -f "$RUNNING_LOG"
+  RUNNING_LOG=""
+  return "$status"
+}
+
+show_stage 'Comprobando Python y entorno'
+
+PY="${ROOT}/venv/bin/python"
+
+if [[ ! -x "$PY" ]]; then
+  run_with_spinner 'Creando entorno virtual' python3 -m venv venv
+else
+  show_wait 'Entorno virtual disponible' 0
+  clear_wait
+fi
+
+show_stage 'Instalando dependencias Python'
+run_with_spinner 'Instalando dependencias' "$PY" -m pip install -r requirements.txt
 
 port_busy() {
   # exit 0 si ocupado, 1 si libre
@@ -88,7 +125,7 @@ finally:
     s.close()
 PY
     then
-      [[ -t 1 ]] && printf '\n'
+      clear_wait
       echo "    ✓ ${name} listo en :${port}"
       return 0
     fi
@@ -96,6 +133,7 @@ PY
     sleep 0.15
     ((i++)) || true
   done
+  clear_wait
   echo "    ✗ Timeout esperando ${name} (:${port})" >&2
   return 1
 }
